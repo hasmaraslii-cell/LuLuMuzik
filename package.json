@@ -7,6 +7,8 @@
   },
   "dependencies": {
     "express": "^4.19.2",
-    "play-dl": "latest"
+    "spotify-url-info": "^3.2.13",
+    "ytdl-core": "latest",
+    "yt-search": "^2.10.4"
   }
 }
