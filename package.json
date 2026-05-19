@@ -1,13 +1,12 @@
 {
   "name": "lulu-muzik-api",
   "version": "1.0.0",
-  "description": "LuLu Muzik Spotify Stream API",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
     "express": "^4.19.2",
-    "play-dl": "^1.11.2"
+    "play-dl": "latest"
   }
 }
