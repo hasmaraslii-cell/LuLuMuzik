@@ -19,13 +19,13 @@ app.get('/stream', async (req, res) => {
     try {
         console.log("Gelen gerçek link:", spotifyUrl);
         
-        // Spotify linkinden şarkı adı ve sanatçıyı API anahtarsız çekiyoruz
+        // Spotify linkinden şarkı verilerini çekiyoruz
         const trackData = await getPreview(spotifyUrl);
-        const şarkıAdı = `${trackData.title} ${trackData.artist}`;
-        console.log("Çözülen Şarkı:", şarkıAdı);
+        const aramaSorgusu = `${trackData.title} ${trackData.artist}`;
+        console.log("Çözülen Şarkı:", aramaSorgusu);
 
         // YouTube üzerinde temiz ses araması yapıyoruz
-        const r = await yts(sharkıAdı);
+        const r = await yts(aramaSorgusu);
         const videos = r.videos;
         
         if (videos.length > 0) {
@@ -37,7 +37,7 @@ app.get('/stream', async (req, res) => {
             ytdl(videoUrl, {
                 filter: 'audioonly',
                 quality: 'highestaudio',
-                highWaterMark: 1 << 25 // Kesinti önleyici önbellek belleği
+                highWaterMark: 1 << 25
             }).pipe(res);
 
         } else {
