@@ -1,18 +1,9 @@
 const express = require('express');
-const play = require('play-dl');
+const { getPreview } = require('spotify-url-info')(fetch);
+const yts = require('yt-search');
+const ytdl = require('ytdl-core');
 const app = express();
 const PORT = process.env.PORT || 3000;
-
-// play-dl kütüphanesini başlat ve Spotify misafir tokenini almayı dene
-async function baslat() {
-    try {
-        await play.getFreeToken();
-        console.log("Spotify ücretsiz token başarıyla alındı.");
-    } catch (e) {
-        console.log("Token alınırken uyarı (Önemli olmayabilir):", e.message);
-    }
-}
-baslat();
 
 app.get('/', (req, res) => {
     res.send('LuLu Müzik API Aktif ve Çalışıyor!');
@@ -22,47 +13,43 @@ app.get('/stream', async (req, res) => {
     let spotifyUrl = req.query.url;
     
     if (!spotifyUrl) {
-        return res.status(400).send('Hata: Spotify URL girilmedi.');
+        return res.status(400).send('Hata: URL parametresi eksik.');
     }
-
-    // Mobil cihazlardan gelen URL'lerdeki gereksiz parametreleri temizle (?si=... gibi)
-    if (spotifyUrl.includes('?')) {
-        spotifyUrl = spotifyUrl.split('?')[0];
-    }
-
-    console.log("Gelen URL işleniyor:", spotifyUrl);
 
     try {
-        if (spotifyUrl.includes('spotify.com/track/')) {
-            // Spotify linkinden şarkı bilgilerini çek
-            const trackInfo = await play.spotify(spotifyUrl);
-            const searchQuery = `${trackInfo.name} ${trackInfo.artists[0].name}`;
-            console.log(`Aranan Şarkı: ${searchQuery}`);
-            
-            // YouTube Music veya YouTube üzerinden en kararlı ses kaynağını ara
-            const searchResult = await play.search(searchQuery, { limit: 1, source: { youtube: 'video' } });
-            
-            if (searchResult && searchResult.length > 0) {
-                console.log("Kaynak bulundu:", searchResult[0].url);
-                
-                // Canlı akışı (stream) başlat
-                const stream = await play.stream(searchResult[0].url, { quality: 1 }); // En kararlı kalite
-                
-                res.setHeader('Content-Type', 'audio/mpeg');
-                stream.stream.pipe(res);
-            } else {
-                console.log("Hata: Arama sonucu boş döndü.");
-                res.status(404).send('Not Found: Şarkı ses kaynağı bulunamadı.');
-            }
+        console.log("Gelen gerçek link:", spotifyUrl);
+        
+        // Spotify linkinden şarkı adı ve sanatçıyı API anahtarsız çekiyoruz
+        const trackData = await getPreview(spotifyUrl);
+        const şarkıAdı = `${trackData.title} ${trackData.artist}`;
+        console.log("Çözülen Şarkı:", şarkıAdı);
+
+        // YouTube üzerinde temiz ses araması yapıyoruz
+        const r = await yts(sharkıAdı);
+        const videos = r.videos;
+        
+        if (videos.length > 0) {
+            const videoUrl = videos[0].url;
+            console.log("Ses kaynağı bulundu:", videoUrl);
+
+            // Sesi canlı akış (Stream) olarak uygulamaya basıyoruz
+            res.setHeader('Content-Type', 'audio/mpeg');
+            ytdl(videoUrl, {
+                filter: 'audioonly',
+                quality: 'highestaudio',
+                highWaterMark: 1 << 25 // Kesinti önleyici önbellek belleği
+            }).pipe(res);
+
         } else {
-            res.status(400).send('Geçersiz Spotify linki.');
+            res.status(404).send('Şarkı sesi bulunamadı.');
         }
+
     } catch (error) {
-        console.error("Sunucu içi hata:", error);
-        res.status(500).send('Sunucu Hatası: ' + error.message);
+        console.error(error);
+        res.status(500).send('Sistem Hatası: ' + error.message);
     }
 });
 
 app.listen(PORT, () => {
-    console.log(`LuLu API ${PORT} portunda dinleniyor.`);
+    console.log(`LuLu Sunucusu ${PORT} üzerinde yayında.`);
 });
